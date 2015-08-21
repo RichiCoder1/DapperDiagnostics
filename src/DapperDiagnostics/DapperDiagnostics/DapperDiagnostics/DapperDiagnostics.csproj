@@ -120,7 +120,12 @@
     <GetAssemblyIdentity AssemblyFiles="$(OutDir)\$(AssemblyName).dll">
       <Output TaskParameter="Assemblies" ItemName="DapperDiagnosticsAssemblyInfo" />
     </GetAssemblyIdentity>
-    <Exec Command="&quot;$(SolutionDir)packages\NuGet.CommandLine.2.8.5\tools\NuGet.exe&quot; pack Diagnostic.nuspec -NoPackageAnalysis -Version %(DapperDiagnosticsAssemblyInfo.Version) -OutputDirectory ." WorkingDirectory="$(OutDir)" LogStandardErrorAsError="true" ConsoleToMSBuild="true">
+    <PropertyGroup>
+      <DapperVersionPatter>(\d+)\.(\d+).(\d+)</DapperVersionPatter>
+      <In>%(DapperDiagnosticsAssemblyInfo.Version)</In>
+      <OutVersion>$([System.Text.RegularExpressions.Regex]::Match($(In), $(DapperVersionPatter)))</OutVersion>
+    </PropertyGroup>
+    <Exec Command="&quot;$(SolutionDir)packages\NuGet.CommandLine.2.8.5\tools\NuGet.exe&quot; pack Diagnostic.nuspec -NoPackageAnalysis -Version $(OutVersion) -OutputDirectory ." WorkingDirectory="$(OutDir)" LogStandardErrorAsError="true" ConsoleToMSBuild="true">
       <Output TaskParameter="ConsoleOutput" PropertyName="OutputOfExec" />
     </Exec>
   </Target>
