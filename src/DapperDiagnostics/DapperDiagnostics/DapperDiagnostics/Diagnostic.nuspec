@@ -6,8 +6,8 @@
     <title>DapperDiagnostics</title>
     <authors>Richard Simpson</authors>
     <owners>Richard Simpson</owners>
-    <licenseUrl>http://tbd</licenseUrl>
-    <projectUrl>http://tbd</projectUrl>
+    <licenseUrl>https://github.com/RichiCoder1/DapperDiagnostics/blob/master/LICENSE.txt</licenseUrl>
+    <projectUrl>https://github.com/RichiCoder1/DapperDiagnostics</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A set of dapper diagnostics for sanity checking dapper usage.</description>
     <releaseNotes>Inital Package</releaseNotes>

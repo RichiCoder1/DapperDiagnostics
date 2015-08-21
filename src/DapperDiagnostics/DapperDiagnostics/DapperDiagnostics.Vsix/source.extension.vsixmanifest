@@ -4,6 +4,7 @@
     <Identity Id="DapperDiagnostics.Vsix..cbc8744b-c078-42e3-916f-8a48d37f959d" Version="0.1" Language="en-US" Publisher="Richard Simpson"/>
     <DisplayName>DapperDiagnostics.Vsix</DisplayName>
     <Description xml:space="preserve">A set of dapper diagnostics for sanity checking dapper usage.</Description>
+    <MoreInfo>https://github.com/RichiCoder1/DapperDiagnostics</MoreInfo>
     <License>LICENSE.txt</License>
     <ReleaseNotes>Initial Release</ReleaseNotes>
     <Tags>Dapper, analyzer, diagnostic</Tags>
