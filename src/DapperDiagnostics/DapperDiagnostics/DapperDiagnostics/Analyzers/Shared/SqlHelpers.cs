@@ -68,22 +68,16 @@ namespace DapperDiagnostics.Analyzers.Shared
         internal static bool Validate(IParseTree tree)
         {
             bool throwAway;
-            return new BaseSqlVisitor<bool>().TryVisit(tree, out throwAway);
+            return new PLSQSafeVisitor<bool>().TryVisit(tree, out throwAway);
         }
 
-        private class SqlParameterVisitor : BaseSqlVisitor<IImmutableList<string>>
+        private class SqlParameterVisitor : PLSQSafeVisitor<IImmutableList<string>>
         {
             #region Overrides of PLSQLBaseVisitor<IImmutableList<string>>
 
-            public override IImmutableList<string> VisitExpr(PLSQLParser.ExprContext context)
+            public override IImmutableList<string> VisitBindExpr(PLSQLParser.BindExprContext context)
             {
-                var bindParam = context.BIND_PARAMETER();
-                if (bindParam != null)
-                {
-                    return ImmutableList.Create(bindParam.GetText());
-                }
-
-                return DefaultResult;
+                return ImmutableList.Create(context.GetText());
             }
 
             #endregion
@@ -140,7 +134,7 @@ namespace DapperDiagnostics.Analyzers.Shared
             #endregion
         }
 
-        private class SqlSelectVisitor : BaseSqlVisitor<IImmutableList<string>>
+        private class SqlSelectVisitor : PLSQSafeVisitor<IImmutableList<string>>
         {
             #region Overrides of PLSQLBaseVisitor<IImmutableList<string>>
 
@@ -152,7 +146,7 @@ namespace DapperDiagnostics.Analyzers.Shared
                     return ImmutableList.Create(alias.GetText());
                 }
 
-                var column = context.expr().column_name();
+                var column = context.expr();
                 if (column != null)
                 {
                     return ImmutableList.Create(column.GetText());
@@ -210,32 +204,6 @@ namespace DapperDiagnostics.Analyzers.Shared
             {
                 if (aggregate.Count == 0 && nextResult.Count == 0) return DefaultResult;
                 return aggregate.AddRange(nextResult);
-            }
-
-            #endregion
-        }
-
-        private class BaseSqlVisitor<T> : PLSQLBaseVisitor<T>
-        {
-            public bool TryVisit(IParseTree tree, out T result)
-            {
-                result = DefaultResult;
-                try
-                {
-                    result = Visit(tree);
-                    return true;
-                }
-                catch (ParseCanceledException)
-                {
-                    return false;
-                }
-            }
-
-            #region Overrides of PLSQLBaseVisitor<T>
-
-            public override T VisitUnexpected(PLSQLParser.UnexpectedContext context)
-            {
-                throw new ParseCanceledException($"Unknown Character: {context.UNEXPECTED_CHAR().GetText()}");
             }
 
             #endregion
