@@ -66,7 +66,9 @@ namespace DapperDiagnostics.Analyzers
                 return;
             }
 
-            var parameters = SqlHelpers.GetSqlParameters(sqlLiteral);
+            bool isValid;
+            var parameters = SqlHelpers.GetSqlParameters(sqlLiteral, out isValid);
+            if (!isValid) return;
 
             if (!parameters.All(
                     parameter => availableProperties.Contains(parameter, StringComparer.CurrentCultureIgnoreCase)))

@@ -150,4 +150,13 @@
   <data name="ReturnObjectMismatch_Scalar_MessageFormat" xml:space="preserve">
     <value>Return type is scalar, but {0} columns are being returned.</value>
   </data>
+  <data name="ValidPLSQLDescription" xml:space="preserve">
+    <value>The SQL is not valid.</value>
+  </data>
+  <data name="ValidPLSQLMessageFormat" xml:space="preserve">
+    <value>The SQL is invalid: {0}</value>
+  </data>
+  <data name="ValidPLSQLTitle" xml:space="preserve">
+    <value>SQL is invalid</value>
+  </data>
 </root>

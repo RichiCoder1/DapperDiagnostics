@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 using Antlr4.Runtime;
 using Antlr4.Runtime.Misc;
+using Antlr4.Runtime.Tree;
 
 using PLSQL.Grammer;
 
@@ -11,29 +11,136 @@ namespace DapperDiagnostics.Analyzers.Shared
 {
     internal static class SqlHelpers
     {
-        private static readonly Regex ParameterRegex = new Regex(":[a-zA-Z_]*");
-
         internal static IImmutableList<string> GetSqlParameters(string sqlText, out bool isValid)
         {
-            isValid = true;
+            var tree = Parse(sqlText, out isValid);
+            if (!isValid) return ImmutableList<string>.Empty;
+
+            var visitor = new SqlParameterVisitor();
+            IImmutableList<string> results;
+            isValid = visitor.TryVisit(tree, out results);
+            return results
+                .Select(item => item.TrimStart(':'))
+                .Where(result => !string.IsNullOrWhiteSpace(result))
+                .ToImmutableList();
+        }
+
+        internal static IImmutableList<string> GetSqlSelectValues(string sqlText, out bool isValid)
+        {
+            var tree = Parse(sqlText, out isValid);
+            if (!isValid) return ImmutableList<string>.Empty;
+
+            var visitor = new SqlSelectVisitor();
+            IImmutableList<string> results;
+            isValid = visitor.TryVisit(tree, out results);
+            return results;
+        }
+
+        internal static bool TryParse(string sqlText, out IParseTree tree, out string error)
+        {
+            error = null;
+            tree = null;
             try
             {
+                
                 var input = new AntlrInputStream(sqlText);
                 var lexer = new PLSQLLexer(input);
                 var tokens = new CommonTokenStream(lexer);
                 var parser = new PLSQLParser(tokens);
-                var tree = parser.Parse();
-                var visitor = new SqlSelectVisitor();
-                return visitor.Visit(tree);
+                tree = parser.Parse();
+                return true;
             }
-            catch (ParseCanceledException)
+            catch (ParseCanceledException ex)
             {
-                isValid = false;
-                return ImmutableList<string>.Empty;
+                error = ex.Message;
+                return false;
             }
         }
 
-        private class SqlSelectVisitor : PLSQLBaseVisitor<IImmutableList<string>>
+        internal static IParseTree Parse(string sqlText, out bool isValid)
+        {
+            IParseTree tree;
+            string error;
+            isValid = TryParse(sqlText, out tree, out error);
+            return tree;
+        }
+
+        internal static bool Validate(IParseTree tree)
+        {
+            bool throwAway;
+            return new BaseSqlVisitor<bool>().TryVisit(tree, out throwAway);
+        }
+
+        private class SqlParameterVisitor : BaseSqlVisitor<IImmutableList<string>>
+        {
+            #region Overrides of PLSQLBaseVisitor<IImmutableList<string>>
+
+            public override IImmutableList<string> VisitExpr(PLSQLParser.ExprContext context)
+            {
+                var bindParam = context.BIND_PARAMETER();
+                if (bindParam != null)
+                {
+                    return ImmutableList.Create(bindParam.GetText());
+                }
+
+                return DefaultResult;
+            }
+
+            #endregion
+
+            #region Overrides of AbstractParseTreeVisitor<IImmutableList<string>>
+
+            /// <inheritdoc />
+            protected override IImmutableList<string> DefaultResult => ImmutableList<string>.Empty;
+
+            /// <summary>
+            /// Aggregates the results of visiting multiple children of a node.
+            /// </summary>
+            /// <remarks>
+            /// Aggregates the results of visiting multiple children of a node. After
+            ///             either all children are visited or
+            ///             <see cref="M:Antlr4.Runtime.Tree.AbstractParseTreeVisitor`1.ShouldVisitNextChild(Antlr4.Runtime.Tree.IRuleNode,`0)"/>
+            ///             returns
+            /// <code>
+            /// false
+            /// </code>
+            ///             , the aggregate value is returned as the result of
+            ///             <see cref="M:Antlr4.Runtime.Tree.AbstractParseTreeVisitor`1.VisitChildren(Antlr4.Runtime.Tree.IRuleNode)"/>
+            ///             .
+            ///             <p>The default implementation returns
+            /// <code>
+            /// nextResult
+            /// </code>
+            ///             , meaning
+            ///             <see cref="M:Antlr4.Runtime.Tree.AbstractParseTreeVisitor`1.VisitChildren(Antlr4.Runtime.Tree.IRuleNode)"/>
+            ///             will return the result of the last child visited
+            ///             (or return the initial value if the node has no children).</p>
+            /// </remarks>
+            /// <param name="aggregate">The previous aggregate value. In the default
+            ///             implementation, the aggregate value is initialized to
+            ///             <see cref="P:Antlr4.Runtime.Tree.AbstractParseTreeVisitor`1.DefaultResult"/>
+            ///             , which is passed as the
+            /// <code>
+            /// aggregate
+            /// </code>
+            ///             argument
+            ///             to this method after the first child node is visited.
+            ///             </param><param name="nextResult">The result of the immediately preceeding call to visit
+            ///             a child node.
+            ///             </param>
+            /// <returns>
+            /// The updated aggregate result.
+            /// </returns>
+            protected override IImmutableList<string> AggregateResult(IImmutableList<string> aggregate, IImmutableList<string> nextResult)
+            {
+                if (aggregate.Count == 0 && nextResult.Count == 0) return DefaultResult;
+                return aggregate.AddRange(nextResult);
+            }
+
+            #endregion
+        }
+
+        private class SqlSelectVisitor : BaseSqlVisitor<IImmutableList<string>>
         {
             #region Overrides of PLSQLBaseVisitor<IImmutableList<string>>
 
@@ -103,6 +210,32 @@ namespace DapperDiagnostics.Analyzers.Shared
             {
                 if (aggregate.Count == 0 && nextResult.Count == 0) return DefaultResult;
                 return aggregate.AddRange(nextResult);
+            }
+
+            #endregion
+        }
+
+        private class BaseSqlVisitor<T> : PLSQLBaseVisitor<T>
+        {
+            public bool TryVisit(IParseTree tree, out T result)
+            {
+                result = DefaultResult;
+                try
+                {
+                    result = Visit(tree);
+                    return true;
+                }
+                catch (ParseCanceledException)
+                {
+                    return false;
+                }
+            }
+
+            #region Overrides of PLSQLBaseVisitor<T>
+
+            public override T VisitUnexpected(PLSQLParser.UnexpectedContext context)
+            {
+                throw new ParseCanceledException($"Unknown Character: {context.UNEXPECTED_CHAR().GetText()}");
             }
 
             #endregion

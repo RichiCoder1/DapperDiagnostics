@@ -159,5 +159,32 @@ namespace DapperDiagnostics {
                 return ResourceManager.GetString("ReturnObjectMismatchTitle", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The SQL is not valid..
+        /// </summary>
+        internal static string ValidPLSQLDescription {
+            get {
+                return ResourceManager.GetString("ValidPLSQLDescription", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The SQL is invalid: {0}.
+        /// </summary>
+        internal static string ValidPLSQLMessageFormat {
+            get {
+                return ResourceManager.GetString("ValidPLSQLMessageFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SQL is invalid.
+        /// </summary>
+        internal static string ValidPLSQLTitle {
+            get {
+                return ResourceManager.GetString("ValidPLSQLTitle", resourceCulture);
+            }
+        }
     }
 }

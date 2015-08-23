@@ -68,37 +68,9 @@ namespace DapperDiagnostics.Analyzers
             var genericTypeArgument = genericTypeInfo.ConvertedType;
             if (genericTypeArgument == null) return;
 
-            var match = SelectRegex.Matches(sqlLiteral);
-            if (match.Count == 0) return;
-
-            // I really don't want to write a PL/SQL compliant sql parser just to get the output. This will only work for simple selects.
-            if (match.Count != 1) return;
-
-            var selectPhrase = match[0].Groups["SelectPhrase"].Value;
-            var parts = selectPhrase.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            var selectNames = new List<string>();
-            foreach (var part in parts.Select(part => part.Trim()))
-            {
-                var pieces = part.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                // If we have a "blank" value, just bail. For ex: `SELECT thing1, FROM table`. Not valid, but not our problem.
-                if (pieces.Length == 0) return;
-
-                var reversedPieces = pieces.Reverse().ToList();
-                if (string.Equals(reversedPieces.Skip(1).FirstOrDefault(), "as", StringComparison.OrdinalIgnoreCase))
-                {
-                    selectNames.Add(reversedPieces.First());
-                }
-                else
-                {
-                    var property = pieces.First();
-                    var propertyParts = property.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
-                    var name = propertyParts.LastOrDefault();
-                    if (name == null)
-                        continue;
-
-                    selectNames.Add(name);
-                }
-            }
+            bool isValid;
+            var selectNames = SqlHelpers.GetSqlSelectValues(sqlLiteral, out isValid);
+            if (!isValid) return;
 
             // If we're expecting a scalar type, but returning multiple things, that's wrong.
             if (IsPrimitiveType(genericTypeArgument) || IsString(genericTypeArgument))
