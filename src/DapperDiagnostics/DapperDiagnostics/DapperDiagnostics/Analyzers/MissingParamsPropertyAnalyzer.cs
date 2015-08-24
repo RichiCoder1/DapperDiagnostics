@@ -58,8 +58,7 @@ namespace DapperDiagnostics.Analyzers
             }
             else if (secondArgument is IdentifierNameSyntax)
             {
-                availableProperties = ProcessFormedObject(context, secondArgument as IdentifierNameSyntax);
-
+                availableProperties = ProcessFormedObject(context.SemanticModel.GetTypeInfo(secondArgument).Type).ToList();
             }
             else
             {
@@ -98,16 +97,16 @@ namespace DapperDiagnostics.Analyzers
                     .ToList();
         }
 
-        private static IReadOnlyList<string> ProcessFormedObject(
-            SyntaxNodeAnalysisContext context,
-            IdentifierNameSyntax syntax)
+        private static IEnumerable<string> ProcessFormedObject(
+            ITypeSymbol symbol)
         {
-            return
-                context.SemanticModel.GetTypeInfo(syntax)
-                    .Type.GetMembers()
-                    .Where(symbol => symbol.Kind == SymbolKind.Property)
-                    .Select(symbol => symbol.Name)
-                    .ToList();
+            if (symbol == null) return Enumerable.Empty<string>();
+            var properties = symbol.GetMembers()
+                .Where(member => member.Kind == SymbolKind.Property && member.DeclaredAccessibility == Accessibility.Public)
+                .Select(member => member.Name)
+                .ToList();
+
+            return properties.Union(ProcessFormedObject(symbol.BaseType));
         }
     }
 }

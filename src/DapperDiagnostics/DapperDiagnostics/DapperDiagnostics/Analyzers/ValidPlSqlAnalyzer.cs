@@ -26,7 +26,7 @@ namespace DapperDiagnostics.Analyzers
 
         public override void Initialize(AnalysisContext context)
         {
-            context.RegisterSyntaxNodeAction(AnalyzeNode, SyntaxKind.InvocationExpression);
+            //context.RegisterSyntaxNodeAction(AnalyzeNode, SyntaxKind.InvocationExpression);
         }
 
         private static void AnalyzeNode(SyntaxNodeAnalysisContext context)
