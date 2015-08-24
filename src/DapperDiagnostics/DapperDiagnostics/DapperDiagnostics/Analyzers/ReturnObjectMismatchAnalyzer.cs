@@ -27,8 +27,6 @@ namespace DapperDiagnostics.Analyzers
         private static readonly DiagnosticDescriptor ScalarRule = new DiagnosticDescriptor(DiagnosticIds.ReturnObjectMismatchRuleId, Title, ScalarMessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: ScalarDescription);
         private static readonly DiagnosticDescriptor PropertiesRule = new DiagnosticDescriptor(DiagnosticIds.ReturnObjectMismatchRuleId, Title, PropertiesMessageFormat, Category, DiagnosticSeverity.Warning, isEnabledByDefault: true, description: PropertiesDescription);
 
-        private static readonly Regex SelectRegex = new Regex(@"select(?<SelectPhrase>[\w\s,\.()]*?)from", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Multiline);
-
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(ScalarRule, PropertiesRule);
 
         public override void Initialize(AnalysisContext context)
@@ -73,7 +71,7 @@ namespace DapperDiagnostics.Analyzers
             if (!isValid) return;
 
             // If we're expecting a scalar type, but returning multiple things, that's wrong.
-            if (IsPrimitiveType(genericTypeArgument) || IsString(genericTypeArgument))
+            if (TypeHelpers.IsPrimitiveType(genericTypeArgument) || TypeHelpers.IsString(genericTypeArgument))
             {
                 if (selectNames.Count == 1) return;
 
@@ -85,11 +83,7 @@ namespace DapperDiagnostics.Analyzers
             }
             else
             {
-                var availableProperties =
-                    genericTypeArgument.GetMembers()
-                        .Where(member => member.Kind == SymbolKind.Property)
-                        .Select(member => member.Name)
-                        .ToList();
+                var availableProperties = TypeHelpers.GetMembers(genericTypeArgument);
 
                 if (selectNames.Any(
                     name => !availableProperties.Contains(name, StringComparer.CurrentCultureIgnoreCase)))
@@ -101,40 +95,6 @@ namespace DapperDiagnostics.Analyzers
                         genericTypeArgument.Name);
                     context.ReportDiagnostic(diagnostic);
                 }
-            }
-        }
-        private static bool IsPrimitiveType(ITypeSymbol type)
-        {
-            switch (type.SpecialType)
-            {
-                case SpecialType.System_Boolean:
-                case SpecialType.System_Byte:
-                case SpecialType.System_Char:
-                case SpecialType.System_Double:
-                case SpecialType.System_Int16:
-                case SpecialType.System_Int32:
-                case SpecialType.System_Int64:
-                case SpecialType.System_UInt16:
-                case SpecialType.System_UInt32:
-                case SpecialType.System_UInt64:
-                case SpecialType.System_IntPtr:
-                case SpecialType.System_UIntPtr:
-                case SpecialType.System_SByte:
-                case SpecialType.System_Single:
-                    return true;
-                default:
-                    return false;
-            }
-        }
-
-        private static bool IsString(ITypeSymbol type)
-        {
-            switch (type.SpecialType)
-            {
-                case SpecialType.System_String:
-                    return true;
-                default:
-                    return false;
             }
         }
     }

@@ -55,11 +55,11 @@ namespace DapperDiagnostics.Analyzers
             IReadOnlyList<string> availableProperties;
             if (secondArgument is AnonymousObjectCreationExpressionSyntax)
             {
-                availableProperties = ProcessAnonymousObject(secondArgument as AnonymousObjectCreationExpressionSyntax);
+                availableProperties = TypeHelpers.GetMembers(secondArgument as AnonymousObjectCreationExpressionSyntax);
             }
             else if (secondArgument is IdentifierNameSyntax)
             {
-                availableProperties = ProcessFormedObject(context.SemanticModel.GetTypeInfo(secondArgument).Type).ToList();
+                availableProperties = TypeHelpers.GetMembers(context.SemanticModel.GetTypeInfo(secondArgument).Type).ToList();
             }
             else
             {
@@ -84,30 +84,6 @@ namespace DapperDiagnostics.Analyzers
 
                 context.ReportDiagnostic(diagnostic);
             }
-        }
-
-        private static IReadOnlyList<string> ProcessAnonymousObject(
-            AnonymousObjectCreationExpressionSyntax anonymousObject)
-        {
-            return anonymousObject.Initializers.Select(
-                    declarator =>
-                        declarator.NameEquals?.Name.Identifier.Text
-                        ?? (declarator.Expression as IdentifierNameSyntax)?.Identifier.Text
-                        ?? (declarator.Expression as MemberAccessExpressionSyntax)?.Name.Identifier.Text)
-                    .Where(name => name != null)
-                    .ToList();
-        }
-
-        private static IEnumerable<string> ProcessFormedObject(
-            ITypeSymbol symbol)
-        {
-            if (symbol == null) return Enumerable.Empty<string>();
-            var properties = symbol.GetMembers()
-                .Where(member => member.Kind == SymbolKind.Property && member.DeclaredAccessibility == Accessibility.Public)
-                .Select(member => member.Name)
-                .ToList();
-
-            return properties.Union(ProcessFormedObject(symbol.BaseType));
         }
     }
 }
